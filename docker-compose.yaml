@@ -1,0 +1,6 @@
+version: '3'
+services:
+  tedge:
+    build:
+      dockerfile: images/Dockerfile
+    privileged: true

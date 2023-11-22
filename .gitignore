@@ -1,0 +1,10 @@
+# Build
+dist/
+
+# Testing
+.env
+.venv/
+output/
+report.html
+log.html
+output.xml

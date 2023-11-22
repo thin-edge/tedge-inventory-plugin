@@ -1,0 +1,52 @@
+#!/bin/sh
+set -e
+
+EXIT_OK=0
+EXIT_NOT_SUPPORTED=2
+
+hardware_info_container() {
+    MODEL="container"
+    if [ -f /.dockerenv ]; then
+        HARDWARE="docker"
+    elif [ -f /run/.containerenv ]; then
+        HARDWARE="podman"
+    else
+        # unknown
+        HARDWARE="container"
+    fi
+
+    # Use the hostname as the serial, though this might change over time
+    SERIAL="unknown"
+    if [ -n "$HOSTNAME" ]; then
+        SERIAL="$HOSTNAME"
+    elif [ -n "$HOST" ]; then
+        SERIAL="$HOST"
+    fi
+
+    echo "model=\"$MODEL\""
+    echo "revision=\"$HARDWARE\""
+    echo "serialNumber=\"$SERIAL\""
+}
+
+hardware_info_device() {
+    MODEL=$(grep Model /proc/cpuinfo | cut -d: -f2- | xargs)
+    HARDWARE=$(grep "^Hardware" /proc/cpuinfo | cut -d: -f2- | xargs)
+    REVISION=$(grep "^Revision" /proc/cpuinfo | cut -d: -f2- | xargs)
+    SERIAL=$(grep "^Serial" /proc/cpuinfo | cut -d: -f2- | xargs)
+
+    echo "model=\"$MODEL\""
+    echo "revision=\"$HARDWARE-$REVISION\""
+    echo "serialNumber=\"$SERIAL\""
+}
+
+# Check if running in a container or not (note, this is just a rough check)
+if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
+    hardware_info_container
+elif [ -f /proc/cpuinfo ]; then
+    hardware_info_device
+else
+    echo "Could not read hardware information" >&2
+    exit "$EXIT_NOT_SUPPORTED"
+fi
+
+exit "$EXIT_OK"

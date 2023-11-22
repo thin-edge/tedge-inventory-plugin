@@ -1,0 +1,141 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          tedge-inventory
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: thin-edge.io community inventory script runner
+# Description:       thin-edge.io community inventory script runner
+### END INIT INFO
+
+dir="/usr/share/tedge-inventory/"
+DAEMON="/usr/share/tedge-inventory/runner.sh"
+DAEMON_USER=""
+DAEMON_ARGS=""
+
+name="tedge-inventory"
+PIDFILE=/run/lock/$name.lock
+stdout_log="/var/log/$name.log"
+stderr_log="/var/log/$name.err"
+
+user_exists() {
+    if command -V getent > /dev/null 2>&1; then
+        getent passwd "$1" >/dev/null
+    else
+        # Fallback to plain grep, as busybox does not have getent
+        grep -q "^${1}:" /etc/passwd
+    fi
+}
+
+# Check if sudo or su is installed, otherwise don't use it
+SUDO=""
+if [ -n "$DAEMON_USER" ]; then
+    if user_exists "$DAEMON_USER"; then
+        if command -V sudo >/dev/null 2>&1; then
+            SUDO="sudo"
+            if [ -n "$DAEMON_USER" ] && user_exists "$DAEMON_USER"; then
+                SUDO="sudo -u $DAEMON_USER"
+            fi
+        elif command -V runuser >/dev/null 2>&1; then
+            SUDO="runuser"
+            if [ -n "$DAEMON_USER" ] && user_exists "$DAEMON_USER"; then
+                SUDO="runuser -u $DAEMON_USER --"
+            fi
+        elif command -V su >/dev/null 2>&1; then
+            # Note: using su requires a user which can login
+            # su -s /bin/sh -c '$DAEMON $DAEMON_AGS' $DAEMON_USER
+            SUDO="su"
+            if [ -n "$DAEMON_USER" ] && user_exists "$DAEMON_USER"; then
+                SUDO="su - $DAEMON_USER"
+            fi
+        fi
+    else
+        echo "WARNING: Daemon user does not exist, so starting the service as current user. DAEMON_USER=$DAEMON_USER"
+    fi
+fi
+
+get_pid() { cat "$PIDFILE"; }
+
+is_running() {
+    # shellcheck disable=SC2009
+    # Use ps/grep fallback as busybox does not support the "ps -p" option
+    if command -V pidof >/dev/null 2>&1; then
+        pidof tedge-inventory >/dev/null
+    else
+        PROCESSES=$(ps -x || ps)
+        [ -f "$PIDFILE" ] && (echo "$PROCESSES" | grep "^[[:blank:]]*$(get_pid)" >/dev/null 2>&1)
+    fi
+}
+
+case "$1" in
+    start)
+        if is_running; then
+            echo "Already started"
+        else
+            echo "Starting $name (using '$SUDO $DAEMON $DAEMON_ARGS')"
+            cd "$dir" || (echo "Failed changing directory"; exit 1)
+            $SUDO $DAEMON $DAEMON_ARGS >> "$stdout_log" 2>> "$stderr_log" &
+            # TODO: is it ok to let the process create the pidfile itself?
+            # echo $! > "$PIDFILE"
+
+            i=10
+            printf "Waiting for %s.." "$name"
+            while [ $i -gt 0 ]; do
+                if is_running; then
+                    break
+                fi
+                printf "."
+                i=$((i-1))
+                sleep 1
+            done
+
+            if ! is_running; then
+                echo "Unable to start, see $stdout_log and $stderr_log"
+                exit 1
+            else
+                echo "started"
+            fi
+        fi
+        ;;
+    stop)
+        if is_running; then
+            printf "Stopping (pid=%s) %s.." "$(get_pid)" "$name"
+            kill "$(get_pid)"
+            i=30
+            while [ $i -gt 0 ]; do
+                if ! is_running; then
+                    break
+                fi
+                printf "."
+                i=$((i-1))
+                sleep 1
+            done
+            echo
+
+            if is_running; then
+                echo "Not stopped; may still be shutting down or shutdown may have failed"
+                exit 1
+            else
+                echo "stopped"
+                if [ -f "$PIDFILE" ]; then
+                    rm -f "$PIDFILE"
+                fi
+            fi
+        else
+            echo "Not running"
+        fi
+        ;;
+    restart)
+        exit 0
+        ;;
+    status)
+        exit 0
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+        ;;
+esac
+
+exit 0

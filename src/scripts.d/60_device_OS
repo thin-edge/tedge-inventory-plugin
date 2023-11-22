@@ -1,0 +1,53 @@
+#!/bin/sh
+set -e
+
+EXIT_OK=0
+#EXIT_NOT_SUPPORTED=2
+
+#
+# OS Name
+#
+if [ -f /etc/os-release ]; then
+    # Default values
+    PRETTY_NAME="unknown"
+    VERSION_ID="unknown"
+
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    printf 'displayName="%s"\n' "$PRETTY_NAME"
+    printf 'version="%s"\n' "$VERSION_ID"
+else
+    echo "Warning. Can't read OS information as the /etc/os-release file is not present" >&2
+fi
+
+#
+# Host info
+#
+host_name=
+if command -V hostname >/dev/null 2>&1; then
+    host_name=$(hostname)
+elif [ -n "$HOSTNAME" ]; then
+    host_name="$HOSTNAME"
+elif [ -n "$HOST" ]; then
+    host_name="$HOST"
+fi
+
+if [ -n "$host_name" ]; then
+    printf 'hostname="%s"\n' "$host_name"
+fi
+
+#
+# Arch/Kernel
+#
+if command -V uname >/dev/null >&1; then
+    arch=$(uname -m || true)
+    if [ "$arch" = "arm64" ]; then
+        # Normalize arch, as some distributions call it arm64 and some call it aarch64
+        arch="aarch64"
+    fi
+    printf 'arch="%s"\n' "$arch"
+    printf 'family="%s"\n' "$(uname -o || true)"
+    printf 'kernel="%s"\n' "$(uname -v)"
+fi
+
+exit "$EXIT_OK"
