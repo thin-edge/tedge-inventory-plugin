@@ -1,7 +1,6 @@
 [Unit]
 Description=thin-edge.io community inventory script runner
 After=network.target
-After=mosquitto.service
 
 [Service]
 Type=simple

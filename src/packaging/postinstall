@@ -13,6 +13,7 @@ cleanup() {
     # This is where you remove files that were not needed on this platform / system
     if [ "${use_systemctl}" = "False" ]; then
         rm -f /lib/systemd/system/tedge-inventory.service
+        rm -f /lib/systemd/system/tedge-inventory.timer
     else
         rm -f /etc/chkconfig/tedge-inventory
         rm -f /etc/init.d/tedge-inventory
@@ -38,12 +39,11 @@ cleanInstall() {
         printf "\033[32m Reload the service unit from disk\033[0m\n"
         systemctl daemon-reload ||:
         printf "\033[32m Unmask the service\033[0m\n"
-        systemctl unmask tedge-inventory ||:
+        systemctl unmask tedge-inventory.timer ||:
         printf "\033[32m Set the preset flag for the service unit\033[0m\n"
-        systemctl preset tedge-inventory ||:
+        systemctl preset tedge-inventory.timer ||:
         printf "\033[32m Set the enabled flag for the service unit\033[0m\n"
-        systemctl enable tedge-inventory ||:
-        systemctl restart tedge-inventory ||:
+        systemctl enable tedge-inventory.timer ||:
     fi
 }
 

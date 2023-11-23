@@ -22,7 +22,7 @@ do_systemd() {
     # tedge-inventory
     systemctl disable tedge-inventory ||:
     if [ -d /run/systemd/system ]; then
-        systemctl stop tedge-inventory ||:
+        systemctl stop tedge-inventory.timer ||:
     fi
 }
 
