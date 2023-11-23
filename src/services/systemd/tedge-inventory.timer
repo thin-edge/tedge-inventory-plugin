@@ -2,7 +2,7 @@
 Description=thin-edge.io community inventory script runner
 
 [Timer]
-OnBootSec=1min
+OnBootSec=30s
 OnUnitActiveSec=1h
 
 [Install]
