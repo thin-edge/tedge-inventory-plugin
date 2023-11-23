@@ -1,0 +1,9 @@
+[Unit]
+Description=thin-edge.io community inventory script runner
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=1h
+
+[Install]
+WantedBy=timers.target

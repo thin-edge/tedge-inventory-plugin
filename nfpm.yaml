@@ -28,7 +28,7 @@ contents:
       mode: 0755
 
   # service definitions
-  - src: ./src/services/systemd/tedge-inventory.service
+  - src: ./src/services/systemd/tedge-inventory.*
     dst: /lib/systemd/system/
     file_info:
       mode: 0644
@@ -40,7 +40,7 @@ contents:
       mode: 0755
     packager: deb
 
-  - src: ./src/services/systemd/tedge-inventory.service
+  - src: ./src/services/systemd/tedge-inventory.*
     dst: /lib/systemd/system/
     file_info:
       mode: 0644
