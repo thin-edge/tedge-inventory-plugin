@@ -39,6 +39,14 @@ hardware_info_device() {
     echo "serialNumber=\"$SERIAL\""
 }
 
+# FIXME: Workaround for an issue when publishing a message before the system clock has been synchronized
+# results in the message not being sent to the cloud
+# By adding the sysClockSync value, it will bypass the tedge-mapper-c8y diff check
+if command -V timedatectl >/dev/null 2>&1; then
+    system_time_insync=$(timedatectl | grep "System clock synchronized" | cut -d: -f2 | xargs)
+    echo "sysClockSync=\"$system_time_insync\""
+fi
+
 # Check if running in a container or not (note, this is just a rough check)
 if [ -f /.dockerenv ] || [ -f /run/.containerenv ]; then
     hardware_info_container
