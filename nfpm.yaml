@@ -11,6 +11,7 @@ description: thin-edge.io inventory scripts
 vendor: thin-edge.io
 homepage: https://github.com/thin-edge/tedge-inventory-plugin
 license: Apache License 2.0
+disable_globbing: false
 depends:
   - tedge
 apk:
@@ -28,7 +29,7 @@ contents:
       mode: 0755
 
   # service definitions
-  - src: ./src/services/systemd/tedge-inventory.*
+  - src: ./src/services/systemd/*
     dst: /lib/systemd/system/
     file_info:
       mode: 0644
@@ -40,7 +41,7 @@ contents:
       mode: 0755
     packager: deb
 
-  - src: ./src/services/systemd/tedge-inventory.*
+  - src: ./src/services/systemd/*
     dst: /lib/systemd/system/
     file_info:
       mode: 0644
