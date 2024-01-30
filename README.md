@@ -27,8 +27,8 @@ An example script is shown below which adds multiple properties to the the `info
 **file: /usr/share/tedge-inventory/scripts.d/00_info**
 
 ```sh
-#!bin/sh
-printf 'mymetric="%s\n' "some string value"
+#!/bin/sh
+printf 'mymetric="%s"\n' "some string value"
 echo "another_value=1"
 echo "nested={\"values\":\"ok\"}"
 ```
