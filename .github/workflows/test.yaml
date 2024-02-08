@@ -11,13 +11,22 @@ on:
     branches: [ main ]
   merge_group:
 jobs:
-  test:
-    name: Test
+  approve:
+    name: Approve
     environment:
       # For security reasons, all pull requests need to be approved first before granting access to secrets
       # So the environment should be set to have a reviewer/s inspect it before approving it
       name: ${{ github.event_name == 'pull_request_target' && 'Test Pull Request' || 'Test Auto'  }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for approval
+        run: echo "Approved"
+  test:
+    name: Test
+    needs: [approve]
+    environment:
+      name: Test Auto
+    runs-on: ubuntu-latest
     env:
       COMPOSE_PROJECT_NAME: ci_${{github.run_id}}_${{github.run_attempt || '1'}}
       DEVICE_ID: ci_${{github.run_id}}_${{github.run_attempt || '1'}}
@@ -25,12 +34,12 @@ jobs:
       # Checkout either the PR or the branch
       - name: Checkout PR
         if: ${{ github.event_name == 'pull_request_target' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }} # Check out the code of the PR. Only after the manual approval process
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         if: ${{ github.event_name != 'pull_request_target' }}
 
       - name: create .env file
@@ -42,7 +51,7 @@ jobs:
           echo 'C8Y_PASSWORD="${{ secrets.C8Y_PASSWORD }}"' >> .env
           cat .env
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           cache: 'pip'
@@ -56,7 +65,7 @@ jobs:
       #
       # Build
       #
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
           go-version: '>=1.17.0'
       - name: Install dependencies
@@ -80,7 +89,7 @@ jobs:
         run: just test
 
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: reports
@@ -101,14 +110,16 @@ jobs:
     if: ${{ always() && github.event_name == 'pull_request_target' }}
     needs: [test]
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Download reports
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: reports
         path: reports
     - name: Send report to commit
-      uses: joonvena/robotframework-reporter-action@v2.1
+      uses: joonvena/robotframework-reporter-action@v2.3
       with:
         gh_access_token: ${{ secrets.GITHUB_TOKEN }}
