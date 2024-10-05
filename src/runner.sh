@@ -58,7 +58,7 @@ try_pub() {
 }
 
 _NEWLINE=$(printf '\n')
-find "$RUN_PARTS" -type f -name "$NAME_FILTER" -perm 755 | while IFS="$_NEWLINE" read -r file
+find -L "$RUN_PARTS" -type f -name "$NAME_FILTER" -perm 755 | while IFS="$_NEWLINE" read -r file
 do
     echo "Executing inventory script: $file" >&2
     property=$(basename "$file" | cut -d_ -f2-)
