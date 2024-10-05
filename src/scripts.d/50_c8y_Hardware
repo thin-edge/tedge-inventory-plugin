@@ -5,26 +5,66 @@ EXIT_OK=0
 EXIT_NOT_SUPPORTED=2
 
 hardware_info_container() {
-    MODEL="container"
-    if [ -f /.dockerenv ]; then
-        HARDWARE="docker"
-    elif [ -f /run/.containerenv ]; then
-        HARDWARE="podman"
-    else
-        # unknown
-        HARDWARE="container"
+    #
+    # Allow container users to override these values
+    # by setting environment variables
+    #
+    CONTAINER_ENGINE="${CONTAINER_ENGINE:-}"
+    if [ -z "$CONTAINER_ENGINE" ]; then
+        if [ -f /.dockerenv ]; then
+            CONTAINER_ENGINE="docker"
+        elif [ -f /run/.containerenv ]; then
+            CONTAINER_ENGINE="podman"
+        fi
+    fi
+    if [ -z "$CONTAINER_ENGINE" ]; then
+        CONTAINER_ENGINE="container"
+    fi
+
+    MODEL="${MODEL:-}"
+    REVISION="${REVISION:-}"
+    SERIAL="${SERIAL:-}"
+
+    if [ -f /etc/os-release ]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        echo "Using information from /etc/os-release" >&2
+
+        if [ -z "$MODEL" ] && [ -n "${NAME:-}" ]; then
+            MODEL="${CONTAINER_ENGINE} ${NAME}"
+        fi
+
+        if [ -z "$REVISION" ] && [ -n "${VERSION_ID:-}" ]; then
+            REVISION="${VERSION_ID}"
+        fi
     fi
 
     # Use the hostname as the serial, though this might change over time
-    SERIAL="unknown"
-    if [ -n "$HOSTNAME" ]; then
-        SERIAL="$HOSTNAME"
-    elif [ -n "$HOST" ]; then
-        SERIAL="$HOST"
+    if [ -z "$SERIAL" ]; then
+        if command -V hostname >/dev/null 2>&1; then
+            SERIAL=$(hostname)
+        elif [ -n "$HOSTNAME" ]; then
+            SERIAL="$HOSTNAME"
+        elif [ -n "$HOST" ]; then
+            SERIAL="$HOST"
+        fi
+    fi
+
+    # Set defaults
+    if [ -z "$MODEL" ]; then
+        MODEL="$CONTAINER_ENGINE"
+    fi
+
+    if [ -z "$REVISION" ]; then
+        REVISION="0.0.0"
+    fi
+
+    if [ -z "$SERIAL" ]; then
+        SERIAL="unknown"
     fi
 
     echo "model=\"$MODEL\""
-    echo "revision=\"$HARDWARE\""
+    echo "revision=\"$REVISION\""
     echo "serialNumber=\"$SERIAL\""
 }
 
