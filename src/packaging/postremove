@@ -24,6 +24,7 @@ do_systemd() {
     if [ -d /run/systemd/system ]; then
         systemctl stop tedge-inventory.timer ||:
     fi
+    systemctl daemon-reload ||:
 }
 
 do_initd() {
