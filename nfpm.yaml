@@ -12,10 +12,6 @@ vendor: thin-edge.io
 homepage: https://github.com/thin-edge/tedge-inventory-plugin
 license: Apache License 2.0
 disable_globbing: false
-# Use weak dependency so it can be installed in alpine environments
-# which use the base tedge container image (where the package is not installed, only the binaries are present)
-recommends:
-  - tedge
 apk:
   # Use noarch instead of "all"
   arch: noarch
@@ -57,16 +53,21 @@ contents:
 
 overrides:
   apk:
+    # Note: don't depend on tedge for apk to allow installing in the tedge container image (which just has the tedge binaries)
     scripts:
       postinstall: src/packaging/postinstall
       postremove: src/packaging/postremove
 
   rpm:
+    recommends:
+      - tedge
     scripts:
       postinstall: src/packaging/postinstall
       postremove: src/packaging/postremove
 
   deb:
+    recommends:
+      - tedge
     scripts:
       postinstall: src/packaging/postinstall
       postremove: src/packaging/postremove
