@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# Get position/location information about the device using the ipinfo.io service
+# The output is stored on disk to reduce number of requests to once per startup
+#
+# Example
+# $ ./80_c8y_Position
+# ip="8.8.8.8"
+# city="Hamburg"
+# country="DE"
+# timezone="Europe/Berlin"
+#
+
+fail() {
+    rc=$1
+    shift
+    echo "${0}: $*" >&2
+    exit "$rc"
+}
+
+TIMEOUT=30  # Request timeout
+TEMPFILE="/tmp/tedge/device-location"
+
+# the names of the attributes holding the localization data can be configured here
+ATTR_NAME_IP="ip"
+ATTR_NAME_CITY="city"
+ATTR_NAME_COUNTRY="country"
+ATTR_NAME_TIMEZONE="timezone"
+# the following two attributes denote latitude (geo-lat) and longitude (geo-lon)
+# as returned by the ipinfo.io in the loc field (loc=latitude,longitude)
+ATTR_NAME_LAT="lat"
+ATTR_NAME_LON="lng"
+
+# check for empty file
+if [ -f "${TEMPFILE}" ] && [ -z "$(cat "${TEMPFILE}")" ]; then
+    echo "Removing empty file. path=${TEMPFILE}" >&2
+    rm -f "${TEMPFILE}"
+fi
+
+if [ ! -f "${TEMPFILE}" ]; then
+    ip_info=$(
+        wget \
+            --timeout=${TIMEOUT} -q -O /dev/stdout \
+            --header 'Accept: application/json' \
+            https://ipinfo.io
+    )
+    # shellcheck disable=SC2181
+    if [ "$?" != 0 ] || [ -z "${ip_info}" ]; then
+        fail 2 "Unable to get IP info from ipinfo.io"
+    fi
+
+    # Fetch and cache geo location data
+    mkdir -p "$(dirname "${TEMPFILE}")" || \
+        fail $? "Failed to create temporary storage for geo location data. path=${TEMPFILE}"
+
+    # Convert pretty printed JSON to key=value format
+    ip_info=$(
+        echo "${ip_info}" \
+        | awk -F ': ?' '/[^{}]/ {printf "%s=%s\n", $1, $2}' \
+        | sed 's/,$//g' \
+        | sed 's/^ *//g' \
+        | tr -d '"'
+    )
+
+    echo "${ip_info}" | \
+        awk -F'=' -v attr_ip="${ATTR_NAME_IP}" \
+            -v attr_city="${ATTR_NAME_CITY}" \
+            -v attr_lat="${ATTR_NAME_LAT}" \
+            -v attr_lon="${ATTR_NAME_LON}" \
+            -v attr_country="${ATTR_NAME_COUNTRY}" \
+            -v attr_zone="${ATTR_NAME_TIMEZONE}" '
+$1 ~ /^ip/       {printf "%s=\"%s\"\n", attr_ip, $2};
+$1 ~ /^loc/      {split($2,a,","); printf "%s=%s\n%s=%s\n", attr_lat, a[1], attr_lon, a[2]};
+$1 ~ /^city/     {printf "%s=\"%s\"\n", attr_city, $2};
+$1 ~ /^country/  {printf "%s=\"%s\"\n", attr_country, $2};
+$1 ~ /^timezone/ {printf "%s=\"%s\"\n", attr_zone, $2};
+' > "${TEMPFILE}"
+else
+    echo "Using cached location file. path=${TEMPFILE}" >&2
+fi
+
+cat "$TEMPFILE"
+exit $?

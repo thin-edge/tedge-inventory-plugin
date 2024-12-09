@@ -24,6 +24,17 @@ Inventory Script: Hardware information
     Should Not Be Empty    ${mo["c8y_Hardware"]["serialNumber"]}
     Should Not Be Empty    ${mo["c8y_Hardware"]["revision"]}
 
+Inventory Script: Position information
+    ${mo}=    Cumulocity.Device Should Have Fragments    c8y_Position    timeout=90
+    Log    ${mo["c8y_Position"]}
+    Should Not Be Empty    ${mo["c8y_Position"]["ip"]}
+    Should Not Be Empty    ${mo["c8y_Position"]["city"]}
+    Should Not Be Empty    ${mo["c8y_Position"]["country"]}
+    Should Not Be Empty    ${mo["c8y_Position"]["timezone"]}
+
+    Should Be True    ${mo["c8y_Position"]["lat"]} != 0
+    Should Be True    ${mo["c8y_Position"]["lng"]} != 0
+
 *** Keywords ***
 
 Custom Setup
