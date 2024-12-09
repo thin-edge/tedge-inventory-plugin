@@ -44,6 +44,11 @@ cleanInstall() {
         systemctl preset tedge-inventory.timer ||:
         printf "\033[32m Set the enabled flag for the service unit\033[0m\n"
         systemctl enable tedge-inventory.timer ||:
+
+        if [ -d /run/systemd/system ]; then
+            printf "\033[32m Start the service timer\033[0m\n"
+            systemctl start tedge-inventory.timer ||:
+        fi
     fi
 }
 
