@@ -74,6 +74,13 @@ hardware_info_device() {
     REVISION=$(grep "^Revision" /proc/cpuinfo | cut -d: -f2- | xargs)
     SERIAL=$(grep "^Serial" /proc/cpuinfo | cut -d: -f2- | xargs)
 
+    if [ -z "$MODEL" ]; then
+        if command -V lshw >/dev/null 2>&1; then
+            # Example product: Sipeed Lichee RV Dock, licheerv
+            MODEL=$(lshw -C system 2>/dev/null | grep product | cut -d: -f2- | xargs)
+        fi
+    fi
+
     echo "model=\"$MODEL\""
     echo "revision=\"$HARDWARE-$REVISION\""
     echo "serialNumber=\"$SERIAL\""
