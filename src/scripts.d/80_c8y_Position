@@ -9,6 +9,8 @@
 # city="Hamburg"
 # country="DE"
 # timezone="Europe/Berlin"
+# lat=53.5507
+# lng=9.9930
 #
 
 fail() {
@@ -21,16 +23,6 @@ fail() {
 TIMEOUT=30  # Request timeout
 TEMPFILE="/tmp/tedge/device-location"
 
-# the names of the attributes holding the localization data can be configured here
-ATTR_NAME_IP="ip"
-ATTR_NAME_CITY="city"
-ATTR_NAME_COUNTRY="country"
-ATTR_NAME_TIMEZONE="timezone"
-# the following two attributes denote latitude (geo-lat) and longitude (geo-lon)
-# as returned by the ipinfo.io in the loc field (loc=latitude,longitude)
-ATTR_NAME_LAT="lat"
-ATTR_NAME_LON="lng"
-
 # check for empty file
 if [ -f "${TEMPFILE}" ] && [ -z "$(cat "${TEMPFILE}")" ]; then
     echo "Removing empty file. path=${TEMPFILE}" >&2
@@ -38,12 +30,26 @@ if [ -f "${TEMPFILE}" ] && [ -z "$(cat "${TEMPFILE}")" ]; then
 fi
 
 if [ ! -f "${TEMPFILE}" ]; then
-    ip_info=$(
-        wget \
-            --timeout=${TIMEOUT} -q -O /dev/stdout \
-            --header 'Accept: application/json' \
-            https://ipinfo.io
-    )
+    if command -V wget >/dev/null 2>&1; then
+        echo "Using wget to send request to ipinfo.io" >&2
+        ip_info=$(
+            wget \
+                --timeout=${TIMEOUT} -q -O /dev/stdout \
+                --header 'Accept: application/json' \
+                https://ipinfo.io
+        )
+    elif command -V curl >/dev/null 2>&1; then
+        echo "Using curl to send request to ipinfo.io" >&2
+        ip_info=$(
+            curl \
+                -sfL \
+                --connect-timeout "$TIMEOUT" \
+                -H 'Accept: application/json' \
+                https://ipinfo.io
+        )
+    else
+        fail 2 "Missing dependency. Script requires either wget or curl"
+    fi
     # shellcheck disable=SC2181
     if [ "$?" != 0 ] || [ -z "${ip_info}" ]; then
         fail 2 "Unable to get IP info from ipinfo.io"
@@ -53,28 +59,19 @@ if [ ! -f "${TEMPFILE}" ]; then
     mkdir -p "$(dirname "${TEMPFILE}")" || \
         fail $? "Failed to create temporary storage for geo location data. path=${TEMPFILE}"
 
-    # Convert pretty printed JSON to key=value format
-    ip_info=$(
-        echo "${ip_info}" \
-        | awk -F ': ?' '/[^{}]/ {printf "%s=%s\n", $1, $2}' \
-        | sed 's/,$//g' \
-        | sed 's/^ *//g' \
-        | tr -d '"'
-    )
+    get_json() {
+        # only use grep to parse the json output
+        echo "$ip_info" | grep -o "\"$1\": *\"[^\"]*" | grep -o '[^"]*$'
+    }
 
-    echo "${ip_info}" | \
-        awk -F'=' -v attr_ip="${ATTR_NAME_IP}" \
-            -v attr_city="${ATTR_NAME_CITY}" \
-            -v attr_lat="${ATTR_NAME_LAT}" \
-            -v attr_lon="${ATTR_NAME_LON}" \
-            -v attr_country="${ATTR_NAME_COUNTRY}" \
-            -v attr_zone="${ATTR_NAME_TIMEZONE}" '
-$1 ~ /^ip/       {printf "%s=\"%s\"\n", attr_ip, $2};
-$1 ~ /^loc/      {split($2,a,","); printf "%s=%s\n%s=%s\n", attr_lat, a[1], attr_lon, a[2]};
-$1 ~ /^city/     {printf "%s=\"%s\"\n", attr_city, $2};
-$1 ~ /^country/  {printf "%s=\"%s\"\n", attr_country, $2};
-$1 ~ /^timezone/ {printf "%s=\"%s\"\n", attr_zone, $2};
-' > "${TEMPFILE}"
+    cat <<EOT > "${TEMPFILE}"
+ip="$(get_json ip)"
+city="$(get_json city)"
+country="$(get_json country)"
+timezone="$(get_json timezone)"
+lat=$(get_json loc | cut -d, -f1)
+lng=$(get_json loc | cut -d, -f2)
+EOT
 else
     echo "Using cached location file. path=${TEMPFILE}" >&2
 fi
