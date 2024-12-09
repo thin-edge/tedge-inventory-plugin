@@ -77,7 +77,10 @@ The following linux package formats are provided on the releases page and also i
 
 * The following service will be installed
     * `tedge-inventory` (service and timer) (triggered 30 seconds after boot up and then periodically every 60 mins)
-    * Two inventory scripts to collect information about the hardware and operating system
+    * Inventory scripts
+        * Hardware information
+        * Operating system
+        * Location information based on the IP Address (using [ipinfo.io](ipinfo.io) service)
     * Folder where custom inventory scripts can be added and included in the execution (see below for details)
 
 ## Plugin Dependencies
