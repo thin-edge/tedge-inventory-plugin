@@ -22,6 +22,7 @@ Inventory Script: Hardware information
     Log    ${mo["c8y_Hardware"]}
     Should Not Be Empty    ${mo["c8y_Hardware"]["model"]}
     Should Not Be Empty    ${mo["c8y_Hardware"]["serialNumber"]}
+    Should Not Start With    ${mo["c8y_Hardware"]["serialNumber"]}    -
     Should Not Be Empty    ${mo["c8y_Hardware"]["revision"]}
 
 Inventory Script: Position information
