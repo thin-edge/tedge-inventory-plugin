@@ -126,8 +126,12 @@ hardware_info_device() {
         SERIAL="$(get_mac_address 2>/dev/null)"
     fi
 
+    # Join hardware and revision by "-" but any one of them can be empty (so prevent output like "-abcdef")
+    # by using xargs to trim leading/trailing space, and then replacing any spaces with '-' using tr
+    NORMALIZED_REVISION=$(echo "${HARDWARE} ${REVISION}" | xargs | tr ' ' '-')
+
     echo "model=\"$MODEL\""
-    echo "revision=\"$HARDWARE-$REVISION\""
+    echo "revision=\"$NORMALIZED_REVISION\""
     echo "serialNumber=\"$SERIAL\""
 }
 
