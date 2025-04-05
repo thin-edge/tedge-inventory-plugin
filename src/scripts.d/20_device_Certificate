@@ -1,0 +1,41 @@
+#!/bin/sh
+set -e
+
+EXIT_OK=0
+EXIT_NOT_SUPPORTED=2
+
+#
+# Device certificate information
+#
+
+CURRENT_CERT_INFO=$(tedge cert show ||:)
+
+if [ -z "$CURRENT_CERT_INFO" ]; then
+    echo "Could not read device certificate information from 'tedge cert show'" >&2
+    exit "$EXIT_NOT_SUPPORTED"
+fi
+
+get_cert_property() {
+    PATTERN="$1"
+    echo "$CURRENT_CERT_INFO" | grep -i "$PATTERN" | cut -d: -f2- | xargs
+}
+
+SUBJECT=$(get_cert_property "^Subject")
+ISSUER=$(get_cert_property "^Issuer")
+THUMBPRINT=$(get_cert_property "^Thumbprint" | tr '[:upper:]' '[:lower:]')
+SELF_SIGNED="false"
+if [ "$SUBJECT" = "$ISSUER" ]; then
+    SELF_SIGNED="true"    
+fi
+
+VALID_FROM=$(get_cert_property "^Valid from")
+VALID_UNTIL=$(get_cert_property "^Valid until\|^Valid up to")
+
+printf 'subject="%s"\n' "$SUBJECT"
+printf 'issuer="%s"\n' "$ISSUER"
+printf 'thumbprint="%s"\n' "$THUMBPRINT"
+printf 'selfSigned="%s"\n' "$SELF_SIGNED"
+printf 'validFrom="%s"\n' "$VALID_FROM"
+printf 'validUntil="%s"\n' "$VALID_UNTIL"
+
+exit "$EXIT_OK"
