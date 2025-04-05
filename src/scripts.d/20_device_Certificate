@@ -2,13 +2,18 @@
 set -e
 
 EXIT_OK=0
-#EXIT_NOT_SUPPORTED=2
+EXIT_NOT_SUPPORTED=2
 
 #
 # Device certificate information
 #
 
 CURRENT_CERT_INFO=$(tedge cert show ||:)
+
+if [ -z "$CURRENT_CERT_INFO" ]; then
+    echo "Could not read device certificate information from 'tedge cert show'" >&2
+    exit "$EXIT_NOT_SUPPORTED"
+fi
 
 SUBJECT=$(echo "$CURRENT_CERT_INFO" | grep -i "^Subject" | sed 's/Subject *: *//g')
 ISSUER=$(echo "$CURRENT_CERT_INFO" | grep -i "^Issuer" | sed 's/Issuer *: *//g')
