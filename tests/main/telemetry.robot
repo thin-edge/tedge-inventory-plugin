@@ -36,6 +36,16 @@ Inventory Script: Position information
     Should Be True    ${mo["c8y_Position"]["lat"]} != 0
     Should Be True    ${mo["c8y_Position"]["lng"]} != 0
 
+Inventory Script: Device Certificate information
+    ${mo}=    Cumulocity.Device Should Have Fragments    device_Certificate    timeout=90
+    Log    ${mo["device_Certificate"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["issuer"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["subject"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["thumbprint"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["selfSigned"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["validFrom"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["validUntil"]}
+
 *** Keywords ***
 
 Custom Setup
