@@ -15,16 +15,21 @@ if [ -z "$CURRENT_CERT_INFO" ]; then
     exit "$EXIT_NOT_SUPPORTED"
 fi
 
-SUBJECT=$(echo "$CURRENT_CERT_INFO" | grep -i "^Subject" | sed 's/Subject *: *//g')
-ISSUER=$(echo "$CURRENT_CERT_INFO" | grep -i "^Issuer" | sed 's/Issuer *: *//g')
-THUMBPRINT=$(echo "$CURRENT_CERT_INFO" | grep -i "^Thumbprint" | sed 's/Thumbprint *: *//g' | tr '[:upper:]' '[:lower:]')
+get_cert_property() {
+    PATTERN="$1"
+    echo "$CURRENT_CERT_INFO" | grep -i "$PATTERN" | cut -d: -f2- | xargs
+}
+
+SUBJECT=$(get_cert_property "^Subject")
+ISSUER=$(get_cert_property "^Issuer")
+THUMBPRINT=$(get_cert_property "^Thumbprint" | tr '[:upper:]' '[:lower:]')
 SELF_SIGNED="false"
 if [ "$SUBJECT" = "$ISSUER" ]; then
     SELF_SIGNED="true"    
 fi
 
-VALID_FROM=$(echo "$CURRENT_CERT_INFO" | grep -i "^Valid from" | sed 's/Valid from *: *//g')
-VALID_UNTIL=$(echo "$CURRENT_CERT_INFO" | grep -i "^Valid until" | sed 's/Valid until *: *//g')
+VALID_FROM=$(get_cert_property "^Valid from")
+VALID_UNTIL=$(get_cert_property "^Valid until\|^Valid up to")
 
 printf 'subject="%s"\n' "$SUBJECT"
 printf 'issuer="%s"\n' "$ISSUER"
