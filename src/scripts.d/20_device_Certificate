@@ -23,9 +23,9 @@ get_cert_property() {
 SUBJECT=$(get_cert_property "^Subject")
 ISSUER=$(get_cert_property "^Issuer")
 THUMBPRINT=$(get_cert_property "^Thumbprint" | tr '[:upper:]' '[:lower:]')
-SELF_SIGNED="false"
+SIGNED_BY="ca"
 if [ "$SUBJECT" = "$ISSUER" ]; then
-    SELF_SIGNED="true"    
+    SIGNED_BY="self"
 fi
 
 VALID_FROM=$(get_cert_property "^Valid from")
@@ -34,7 +34,7 @@ VALID_UNTIL=$(get_cert_property "^Valid until\|^Valid up to")
 printf 'subject="%s"\n' "$SUBJECT"
 printf 'issuer="%s"\n' "$ISSUER"
 printf 'thumbprint="%s"\n' "$THUMBPRINT"
-printf 'selfSigned="%s"\n' "$SELF_SIGNED"
+printf 'signedBy="%s"\n' "$SIGNED_BY"
 printf 'validFrom="%s"\n' "$VALID_FROM"
 printf 'validUntil="%s"\n' "$VALID_UNTIL"
 

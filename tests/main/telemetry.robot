@@ -42,7 +42,7 @@ Inventory Script: Device Certificate information
     Should Not Be Empty    ${mo["device_Certificate"]["issuer"]}
     Should Not Be Empty    ${mo["device_Certificate"]["subject"]}
     Should Not Be Empty    ${mo["device_Certificate"]["thumbprint"]}
-    Should Not Be Empty    ${mo["device_Certificate"]["selfSigned"]}
+    Should Not Be Empty    ${mo["device_Certificate"]["signedBy"]}
     Should Not Be Empty    ${mo["device_Certificate"]["validFrom"]}
     Should Not Be Empty    ${mo["device_Certificate"]["validUntil"]}
 
