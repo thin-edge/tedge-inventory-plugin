@@ -1,0 +1,31 @@
+#!/bin/sh
+set -e
+
+EXIT_OK=0
+#EXIT_NOT_SUPPORTED=2
+
+#
+# Device certificate information
+#
+
+CURRENT_CERT_INFO=$(tedge cert show ||:)
+
+SUBJECT=$(echo "$CURRENT_CERT_INFO" | grep -i "^Subject" | sed 's/Subject *: *//g')
+ISSUER=$(echo "$CURRENT_CERT_INFO" | grep -i "^Issuer" | sed 's/Issuer *: *//g')
+THUMBPRINT=$(echo "$CURRENT_CERT_INFO" | grep -i "^Thumbprint" | sed 's/Thumbprint *: *//g' | tr '[:upper:]' '[:lower:]')
+SELF_SIGNED="false"
+if [ "$SUBJECT" = "$ISSUER" ]; then
+    SELF_SIGNED="true"    
+fi
+
+VALID_FROM=$(echo "$CURRENT_CERT_INFO" | grep -i "^Valid from" | sed 's/Valid from *: *//g')
+VALID_UNTIL=$(echo "$CURRENT_CERT_INFO" | grep -i "^Valid until" | sed 's/Valid until *: *//g')
+
+printf 'subject="%s"\n' "$SUBJECT"
+printf 'issuer="%s"\n' "$ISSUER"
+printf 'thumbprint="%s"\n' "$THUMBPRINT"
+printf 'selfSigned="%s"\n' "$SELF_SIGNED"
+printf 'validFrom="%s"\n' "$VALID_FROM"
+printf 'validUntil="%s"\n' "$VALID_UNTIL"
+
+exit "$EXIT_OK"
