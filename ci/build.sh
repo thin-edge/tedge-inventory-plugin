@@ -27,7 +27,17 @@ packages=(
 
 for package_type in "${packages[@]}"; do
     echo ""
-    nfpm package --packager "$package_type" --target ./dist/
+    # meta package
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.yaml
+
+    # core
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.core.yaml
+
+    # plugins
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.c8y-hardware.yaml
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.c8y-position.yaml
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.device-certificate.yaml
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.device-os.yaml
 done
 
 echo "Created all linux packages"

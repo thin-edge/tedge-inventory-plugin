@@ -1,13 +1,13 @@
 # yaml-language-server: $schema=https://nfpm.goreleaser.com/static/schema.json
 ---
-name: tedge-inventory-plugin
+name: tedge-inventory-core
 arch: all
 platform: linux
 version: ${SEMVER}
 section: misc
 priority: optional
 maintainer: Community <community@thin-edge.io>
-description: thin-edge.io inventory scripts
+description: thin-edge.io inventory script runner for executing inventory scripts
 vendor: thin-edge.io
 homepage: https://github.com/thin-edge/tedge-inventory-plugin
 license: Apache License 2.0
@@ -15,10 +15,12 @@ disable_globbing: false
 
 provides:
   - tedge-inventory
-  - tedge-inventory-c8y-hardware
-  - tedge-inventory-c8y-position
-  - tedge-inventory-device-certificate
-  - tedge-inventory-device-os
+
+replaces:
+  - tedge-inventory-plugin
+
+conflicts:
+  - tedge-inventory-plugin
 
 apk:
   # Use noarch instead of "all"
@@ -29,7 +31,7 @@ contents:
     file_info:
       mode: 0755
 
-  - src: ./src/scripts.d/*
+  - src: ./src/scripts.d/README
     dst: /usr/share/tedge-inventory/scripts.d/
     file_info:
       mode: 0755
