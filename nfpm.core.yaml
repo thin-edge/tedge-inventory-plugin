@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://nfpm.goreleaser.com/static/schema.json
+---
+name: tedge-inventory-core
+arch: all
+platform: linux
+version: ${SEMVER}
+section: misc
+priority: optional
+maintainer: Community <community@thin-edge.io>
+description: thin-edge.io inventory script runner for executing inventory scripts
+vendor: thin-edge.io
+homepage: https://github.com/thin-edge/tedge-inventory-plugin
+license: Apache License 2.0
+disable_globbing: false
+
+provides:
+  - tedge-inventory
+
+apk:
+  # Use noarch instead of "all"
+  arch: noarch
+contents:
+  - src: ./src/runner.sh
+    dst: /usr/share/tedge-inventory/runner.sh
+    file_info:
+      mode: 0755
+
+  - src: ./src/scripts.d/README
+    dst: /usr/share/tedge-inventory/scripts.d/
+    file_info:
+      mode: 0755
+
+  # service definitions
+  - src: ./src/services/systemd/*
+    dst: /lib/systemd/system/
+    file_info:
+      mode: 0644
+    packager: deb
+
+  - src: ./src/services/sysvinit/tedge-inventory
+    dst: /etc/init.d/
+    file_info:
+      mode: 0755
+    packager: deb
+
+  - src: ./src/services/systemd/*
+    dst: /lib/systemd/system/
+    file_info:
+      mode: 0644
+    packager: rpm
+  
+  - src: ./src/services/sysvinit/tedge-inventory
+    dst: /etc/init.d/
+    file_info:
+      mode: 0755
+    packager: rpm
+
+overrides:
+  apk:
+    # Note: don't depend on tedge for apk to allow installing in the tedge container image (which just has the tedge binaries)
+    scripts:
+      postinstall: src/packaging/postinstall
+      postremove: src/packaging/postremove
+
+  rpm:
+    recommends:
+      - tedge
+    scripts:
+      postinstall: src/packaging/postinstall
+      postremove: src/packaging/postremove
+
+  deb:
+    recommends:
+      - tedge
+    scripts:
+      postinstall: src/packaging/postinstall
+      postremove: src/packaging/postremove

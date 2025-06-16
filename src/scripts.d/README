@@ -1,0 +1,6 @@
+Place inventory scripts in this folder where the script match the following criteria:
+
+* script name must match "[0-9][0-9]_*"
+* script must be executable
+* script must be owned by root
+* chmod must be "0755"

@@ -73,6 +73,24 @@ The following linux package formats are provided on the releases page and also i
 |Alpine Linux (apk)|[![Latest version of 'tedge-inventory-plugin' @ Cloudsmith](https://api-prd.cloudsmith.io/v1/badges/version/thinedge/community/alpine/tedge-inventory-plugin/latest/a=noarch;d=alpine%252Fany-version/?render=true&show_latest=true)](https://cloudsmith.io/~thinedge/repos/community/packages/detail/alpine/tedge-inventory-plugin/latest/a=noarch;d=alpine%252Fany-version/)|
 |RHEL/CentOS/Fedora (rpm)|[![Latest version of 'tedge-inventory-plugin' @ Cloudsmith](https://api-prd.cloudsmith.io/v1/badges/version/thinedge/community/rpm/tedge-inventory-plugin/latest/a=noarch;d=any-distro%252Fany-version;t=binary/?render=true&show_latest=true)](https://cloudsmith.io/~thinedge/repos/community/packages/detail/rpm/tedge-inventory-plugin/latest/a=noarch;d=any-distro%252Fany-version;t=binary/)|
 
+
+If you don't wish to install all of the plugins then you can also selectively install the packages 
+
+* tedge-inventory-core
+* tedge-inventory-c8y-hardware
+* tedge-inventory-c8y-position
+* tedge-inventory-device-certificate
+* tedge-inventory-device-os
+
+For example, on Debian, after you have configured the Community repository, you install just the plugins
+
+```sh
+apt-get update
+apt-get install \
+    tedge-inventory-device-certificate \
+    tedge-inventory-device-os
+```
+
 ### What will be deployed to the device?
 
 * The following service will be installed
