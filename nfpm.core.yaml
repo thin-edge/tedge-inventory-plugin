@@ -16,6 +16,12 @@ disable_globbing: false
 provides:
   - tedge-inventory
 
+replaces:
+  - tedge-inventory-plugin
+
+conflicts:
+  - tedge-inventory-plugin
+
 apk:
   # Use noarch instead of "all"
   arch: noarch
