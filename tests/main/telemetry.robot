@@ -46,6 +46,10 @@ Inventory Script: Device Certificate information
     Should Not Be Empty    ${mo["device_Certificate"]["validFrom"]}
     Should Not Be Empty    ${mo["device_Certificate"]["validUntil"]}
 
+Inventory Script: Mobile information
+    ${mo}=    Cumulocity.Device Should Have Fragments    device_Certificate    timeout=90
+    Log    ${mo["c8y_Mobile"]}
+
 *** Keywords ***
 
 Custom Setup

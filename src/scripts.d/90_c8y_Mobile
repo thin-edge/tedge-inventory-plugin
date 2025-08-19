@@ -1,0 +1,71 @@
+#!/bin/sh
+#
+# Get details regarding the cellular modem of the device by utilizing the modemmanager (mmcli).
+# The output is stored on disk to reduce number of requests to once per startup
+#
+
+fail() {
+    rc=$1
+    shift
+    echo "${0}: $*" >&2
+    exit "$rc"
+}
+
+get_value() {
+    # only use grep to parse the json output
+    echo "$details" | jq -r "$1"
+}
+
+convert_hex_to_dec() {
+    printf "%d" "0x$1"
+}
+
+if command -V mmcli >/dev/null 2>&1; then
+    echo "Using mmcli to get modem information" >&2
+
+    details=$(mmcli --modem any -J)
+    if [ "$?" != 0 ] || [ -z "${details}" ]; then
+        fail 2 "Unable to get modem info from mmcli"
+    else
+        imei=$(get_value '.modem["3gpp"].imei')
+        echo "imei=\"${imei}\""
+        currentOperator=$(get_value '.modem["3gpp"]["operator-name"]')
+        echo "currentOperator=\"${currentOperator}\""
+    fi
+
+    details=$(mmcli --sim any -J)
+    if [ "$?" != 0 ] || [ -z "${details}" ]; then
+        fail 2 "Unable to get SIM info from mmcli"
+    else
+        iccid=$(get_value '.sim.properties.iccid')
+        echo "iccid=\"${iccid}\""
+        imsi=$(get_value '.sim.properties.imsi')
+        echo "imsi=\"${imsi}\""
+    fi
+
+    details=$(mmcli --modem any --location-get -J)
+    if [ "$?" != 0 ] || [ -z "${details}" ]; then
+        fail 2 "Unable to get location info from mmcli"
+    else
+        cellIdHex=$(get_value '.modem.location["3gpp"].cid')
+        cellId=$(convert_hex_to_dec "$cellIdHex")
+        echo "cellId=\"${cellId}\""
+        mcc=$(get_value '.modem.location["3gpp"].mcc')
+        echo "mcc=\"${mcc}\""
+        mnc=$(get_value '.modem.location["3gpp"].mnc')
+        echo "mnc=\"${mnc}\""
+        lacHex=$(get_value '.modem.location["3gpp"].lac')
+        lac=$(convert_hex_to_dec "$lacHex")
+        tacHex=$(get_value '.modem.location["3gpp"].tac')
+        tac=$(convert_hex_to_dec "$tacHex")
+        if [ "${lac}" = "0" ]; then
+            echo "lac=\"${tac}\""
+        else
+            echo "lac=\"${lac}\""
+        fi
+    fi
+else
+    fail 2 "Missing dependency. Script requires either wget or curl"
+fi
+
+exit $?
