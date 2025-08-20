@@ -46,6 +46,14 @@ Inventory Script: Device Certificate information
     Should Not Be Empty    ${mo["device_Certificate"]["validFrom"]}
     Should Not Be Empty    ${mo["device_Certificate"]["validUntil"]}
 
+Inventory Script: Device Resource information
+    ${mo}=    Cumulocity.Device Should Have Fragments    device_Resources    timeout=90
+    Log    ${mo["device_Resources"]}
+    Should Not Be Empty    ${mo["device_Resources"]["cpuCores"]}
+    Should Not Be Empty    ${mo["device_Resources"]["rootMiB"]}
+    Should Not Be Empty    ${mo["device_Resources"]["memoryMiB"]}
+    Should Not Be Empty    ${mo["device_Resources"]["swapMiB"]}
+
 *** Keywords ***
 
 Custom Setup
