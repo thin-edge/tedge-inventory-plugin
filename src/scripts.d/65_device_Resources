@@ -1,0 +1,71 @@
+#!/bin/sh
+set -e
+
+EXIT_OK=0
+
+# cpu
+CPU_CORES=
+if command -V nproc >/dev/null 2>&1; then
+    CPU_CORES=$(nproc --all)
+else
+    CPU_CORES=$(awk '/^processor/{n+=1}END{print n}' /proc/cpuinfo)
+fi
+printf 'cpuCores=%s\n' "$CPU_CORES"
+
+if command -V lscpu >/dev/null 2>&1; then
+    CPU_VENDOR=$(lscpu | grep "^Vendor ID" | awk '{print $3}')
+    CPU_MODEL_NAME=$(lscpu -b -p=MODELNAME 2>/dev/null | tail -n1)
+    CPU_NAME=""
+
+    # cpu vendor/model (if available)
+    if [ -n "$CPU_VENDOR" ]; then
+        CPU_NAME="$CPU_VENDOR"
+    fi
+    if [ -n "$CPU_MODEL_NAME" ]; then
+        if [ -n "$CPU_NAME" ]; then
+            CPU_NAME="${CPU_NAME} ${CPU_MODEL_NAME}"
+        else
+            CPU_NAME="${CPU_MODEL_NAME}"
+        fi
+    fi
+    if [ -z "$CPU_MODEL_NAME" ]; then
+        if [ -z "$CPU_VENDOR" ]; then
+            CPU_MODEL_NAME="unknown"
+        fi
+    fi
+    printf 'cpuModel="%s"\n' "${CPU_NAME:-unknown}"
+
+    # cpu metrics
+    LSCPU_OUTPUT=$(lscpu -b -p=MAXMHZ,MINMHZ,MHZ,SCALMHZ% | tail -n1)
+    if [ -n "$LSCPU_OUTPUT" ]; then
+        CPU_MAX_MHZ=$(echo "$LSCPU_OUTPUT" | cut -d, -f1 | cut -d. -f1)
+        CURRENT_MHZ=$(echo "$LSCPU_OUTPUT" | cut -d, -f3 | cut -d. -f1)
+        CLOCK_SCALE_PERCENT=$(echo "$LSCPU_OUTPUT" | cut -d, -f4 | cut -d. -f1)
+  
+        if [ -n "$CPU_MAX_MHZ" ]; then
+            printf 'cpuMax="%sMHz"\n' "$CPU_MAX_MHZ"
+        fi
+        if [ -n "$CURRENT_MHZ" ]; then
+            printf 'cpuCurrent="%sMHz"\n' "$CURRENT_MHZ"
+        fi
+        if [ -n "$CLOCK_SCALE_PERCENT" ]; then
+            printf 'cpuScalePerc="%s"\n' "$CLOCK_SCALE_PERCENT"
+        fi
+    fi
+else
+    echo "'lscpu' command was not found so detailed cpu information will not be available" >&2
+fi
+
+# disk
+ROOT_SIZE_MIB=$(df / -P | awk '!/Filesystem/ {print int($2 / 1024)}')
+printf 'rootMiB=%s\n' "$ROOT_SIZE_MIB"
+
+# memory
+MEMORY_TOTAL_MIB=$(free -k | awk '/^Mem:/ {print int($2 / 1024)}')
+printf 'memoryMiB=%s\n' "$MEMORY_TOTAL_MIB"
+
+# memory (swap)
+SWAP_TOTAL_MIB=$(free -k | awk '/^Swap:/ {print int($2 / 1024)}')
+printf 'swapMiB=%s\n' "$SWAP_TOTAL_MIB"
+
+exit "$EXIT_OK"
