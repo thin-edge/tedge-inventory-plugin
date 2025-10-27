@@ -1,0 +1,127 @@
+#!/bin/sh
+set -e
+
+EXIT_OK=0
+
+# Detect network management tool
+NETWORK_MANAGER=""
+if command -v nmcli >/dev/null 2>&1; then
+    NETWORK_MANAGER="networkmanager"
+elif command -v networkctl >/dev/null 2>&1; then
+    NETWORK_MANAGER="networkd"
+fi
+
+convert_to_subnet_mask() {
+    # Convert CIDR (e.g., 22) to subnet mask using a lookup table
+    NETMASK="$1"
+    case "$NETMASK" in
+        8)   NETMASK="255.0.0.0" ;;
+        16)  NETMASK="255.255.0.0" ;;
+        17)  NETMASK="255.255.128.0" ;;
+        18)  NETMASK="255.255.192.0" ;;
+        19)  NETMASK="255.255.224.0" ;;
+        20)  NETMASK="255.255.240.0" ;;
+        21)  NETMASK="255.255.248.0" ;;
+        22)  NETMASK="255.255.252.0" ;;
+        23)  NETMASK="255.255.254.0" ;;
+        24)  NETMASK="255.255.255.0" ;;
+        25)  NETMASK="255.255.255.128" ;;
+        26)  NETMASK="255.255.255.192" ;;
+        27)  NETMASK="255.255.255.224" ;;
+        28)  NETMASK="255.255.255.240" ;;
+        29)  NETMASK="255.255.255.248" ;;
+        30)  NETMASK="255.255.255.252" ;;
+        32)  NETMASK="255.255.255.255" ;;
+        *)   NETMASK="255.255.255.0" ;; # Default fallback
+    esac
+    echo "$NETMASK"
+}
+
+find_interface() {
+    PREFERRED_IFACES=${PREFERRED_IFACES:-"br0,eth0,wlan0,enp,eno"}
+    echo "$PREFERRED_IFACES" | tr ',' '\n' | while read -r iface_pattern; do
+        ip -o link show | awk -F': ' '{print $2}' | while read -r iface; do
+            case "$iface" in
+                $iface_pattern*)
+                    if [ "$(cat /sys/class/net/"$iface"/operstate 2>/dev/null)" = "up" ]; then
+                        echo "$iface"
+                        return
+                    fi
+                    ;;
+            esac
+        done
+    done
+}
+
+# Function to get LAN info
+get_lan_info() {
+    # Try to find a LAN adapter (e.g., br0, eth0)
+    # Allow user to specify preferred interface order via PREFERRED_IFACES env variable, e.g. "wlan0,eth0,br0"
+    # List all interfaces
+    # PREFERRED_IFACES=${PREFERRED_IFACES:-"br0,eth0,wlan0,enp,eno"}
+    IFACE=$(find_interface)
+    if [ -n "$IFACE" ]; then
+        IP=$(ip -4 addr show "$IFACE" | awk '/inet / {print $2}' | cut -d'/' -f1)
+        NETMASK=$(ip -4 addr show "$IFACE" | awk '/inet / {print $2}' | cut -d'/' -f2)
+        
+        if [ -n "$NETMASK" ]; then
+            NETMASK=$(convert_to_subnet_mask "$NETMASK")
+        fi
+        MAC=$(cat /sys/class/net/$IFACE/address)
+        ENABLED=$(cat /sys/class/net/$IFACE/operstate | grep -q 'up' && echo 1 || echo 0)
+
+        printf 'c8y_LAN={"name":"%s","ip":"%s","netmask":"%s","mac":"%s","enabled":%s}\n' "$IFACE" "${IP:-}" "${NETMASK:-}" "${MAC:-}" "${ENABLED:-0}"
+    fi
+}
+
+# Function to get WAN info (example, extend as needed)
+get_wan_info() {
+    # Placeholder: WAN info usually from modem or ppp config
+    # If using nmcli, try to get GSM connection
+    if [ "$NETWORK_MANAGER" = "networkmanager" ]; then
+        CONN=$(nmcli -t -f NAME,TYPE connection show | grep gsm | cut -d: -f1 | head -n1)
+        if [ -n "$CONN" ]; then
+            APN=$(nmcli -g gsm.apn connection show "$CONN")
+            USERNAME=$(nmcli -g gsm.username connection show "$CONN")
+            PASSWORD=$(nmcli -g gsm.password connection show "$CONN")
+            SIM_STATUS="SIM OK" # Placeholder
+            AUTH_TYPE="chap" # Placeholder
+
+            printf 'c8y_WAN={"apn":"%s","username":"%s","password":"%s","simStatus":"%s","authType":"%s"}\n' "${APN:-}" "${USERNAME:-}" "${PASSWORD:-}" "${SIM_STATUS}" "${AUTH_TYPE}"
+        fi
+    fi
+}
+
+# Function to get DHCP info
+get_dhcp_info() {
+    # Try to find DHCP server config (example: dnsmasq)
+    if [ -f /etc/dnsmasq.conf ]; then
+        DNS1=$(grep -m1 '^server=' /etc/dnsmasq.conf | cut -d= -f2)
+        DNS2=$(grep -m2 '^server=' /etc/dnsmasq.conf | tail -n1 | cut -d= -f2)
+        DOMAIN=$(grep '^domain=' /etc/dnsmasq.conf | cut -d= -f2)
+        RANGE_START=$(grep '^dhcp-range=' /etc/dnsmasq.conf | cut -d= -f2 | cut -d, -f1)
+        RANGE_END=$(grep '^dhcp-range=' /etc/dnsmasq.conf | cut -d= -f2 | cut -d, -f2)
+    fi
+
+    if [ -z "$DNS1" ] && [ -z "$DNS2" ]; then
+        if [ -f /etc/resolv.conf ]; then
+            DNS1=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf 2>/dev/null | head -n1 || echo "")
+            DNS2=$(awk '/^nameserver/ {print $2}' /etc/resolv.conf 2>/dev/null | head -n2 | tail -n1 || echo "")
+        fi
+    fi
+
+    ENABLED=0
+    if [ -n "$DNS1" ] && [ -n "$DNS2" ]; then
+        ENABLED=1
+    fi
+
+    if [ "$ENABLED" = 1 ]; then
+        printf 'c8y_DHCP={"dns1":"%s","dns2":"%s","domainName":"%s","addressRange":{"start":"%s","end":"%s"},"enabled":%s}\n' "${DNS1:-}" "${DNS2:-}" "${DOMAIN:--}" "${RANGE_START:-}" "${RANGE_END:-}" "${ENABLED}"
+    fi
+}
+
+get_lan_info
+# get_wan_info
+get_dhcp_info
+
+exit "$EXIT_OK"
