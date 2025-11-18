@@ -38,6 +38,7 @@ for package_type in "${packages[@]}"; do
     nfpm package --packager "$package_type" --target ./dist/ -f nfpm.c8y-position.yaml
     nfpm package --packager "$package_type" --target ./dist/ -f nfpm.device-certificate.yaml
     nfpm package --packager "$package_type" --target ./dist/ -f nfpm.device-os.yaml
+    nfpm package --packager "$package_type" --target ./dist/ -f nfpm.device-resources.yaml
 done
 
 echo "Created all linux packages"
