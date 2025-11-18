@@ -19,6 +19,7 @@ provides:
   - tedge-inventory-c8y-position
   - tedge-inventory-device-certificate
   - tedge-inventory-device-os
+  - tedge-inventory-device-network
 
 apk:
   # Use noarch instead of "all"
