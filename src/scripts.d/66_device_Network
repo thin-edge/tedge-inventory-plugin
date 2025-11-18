@@ -9,16 +9,16 @@ INTERFACES=$(ls /sys/class/net)
 get_lan_info() {
     for IFACE in $INTERFACES; do
         # Exclude loopback
-        if [ $IFACE = "lo" ]; then
+        if [ "$IFACE" = "lo" ]; then
             continue
         fi
 
         MAC=$(cat /sys/class/net/"$IFACE"/address)
-        ENABLED=$(cat /sys/class/net/"$IFACE"/operstate | grep -q 'up' && echo 1 || echo 0)
+        ENABLED=$(cat /sys/class/net/"$IFACE"/operstate)
 
         IP4_LIST=$(ip -4 addr show dev "$IFACE" 2>/dev/null | awk '
             $1 == "inet" {
-                ip_list = (ip_list ? ip_list "," : "") "\"" $2 "\"";
+                ip_list = (ip_list ? ip_list "," : "") $2;
             }
             END {
                 print ip_list
@@ -27,14 +27,14 @@ get_lan_info() {
 
         IP6_LIST=$(ip -6 addr show dev "$IFACE" 2>/dev/null | awk '
             $1 == "inet6" && $2 !~ /^fe80/ {
-                ip_list = (ip_list ? ip_list "," : "") "\"" $2 "\"";
+                ip_list = (ip_list ? ip_list "," : "") $2;
             }
             END {
                 print ip_list
             }
         ')
 
-        printf 'LAN_%s={"name":"%s","ip4":[%s],"ip6":[%s],"mac":"%s","enabled":%s}\n' "$IFACE" "$IFACE" "${IP4_LIST:-}" "${IP6_LIST:-}" "${MAC:-}" "${ENABLED:-0}"
+        printf 'LAN_%s={"name":"%s","ip4":"%s","ip6":"%s","mac":"%s","status":"%s"}\n' "$IFACE" "$IFACE" "${IP4_LIST:-}" "${IP6_LIST:-}" "${MAC:-}" "${ENABLED:-UNKNOWN}"
 
     done
 }
@@ -45,35 +45,34 @@ get_wan_info() {
     DEADLINE=5        # PING deadline
 
     if ! command -v ping >/dev/null 2>&1; then
-        PING_STATUS="Ping not found"
+        PING_STATUS="PING NOT FOUND"
     else
         ping -c "$COUNT" -w "$DEADLINE" "$TARGET" > /dev/null 2>&1
         EXIT_CODE=$?
         if [ $EXIT_CODE -eq 0 ]; then
             PING_STATUS="OK"
         else
-            PING_STATUS="Failed"
+            PING_STATUS="FAILED"
         fi
     fi
 
     if command -v curl >/dev/null 2>&1; then
-        GLOBAL_IP=$(curl -s --connect-timeout 5 ifconfig.me)
+        PUBLIC_IP=$(curl -s --connect-timeout 5 ifconfig.me ||:)
     fi
-    printf 'WAN={"globalIp":"%s","pingStatus":"%s"}\n' "${GLOBAL_IP:-}" "${PING_STATUS}"
+    printf 'WAN={"publicIp":"%s","pingStatus":"%s"}\n' "${PUBLIC_IP:-}" "${PING_STATUS}"
 }
 
 # Get system resolver DNS info
 get_system_dns_info() {
     DNS_SERVERS=$(awk '
             /^nameserver/ {
-                ip = "\"" $2 "\""
-                output = (output ? output "," : "") ip
+                output = (output ? output "," : "") $2
             }
             END {
                 print output
             }
         ' /etc/resolv.conf )
-    printf 'systemResolver={"dns":[%s]}\n' "${DNS_SERVERS:-}"
+    printf 'systemResolver={"dns":"%s"}\n' "${DNS_SERVERS:-}"
 }
 
 # Get DHCP and upstream DNS info
@@ -81,13 +80,14 @@ get_dhcp_info() {
     # Try to find DHCP server config (example: dnsmasq)
     if [ -f /etc/dnsmasq.conf ]; then
         DNS1=$(grep -m1 '^server=' /etc/dnsmasq.conf | cut -d= -f2)
-        DNS2=$(grep -m2 '^server=' /etc/dnsmasq.conf | tail -n1 | cut -d= -f2)
+        DNS2=$(grep -m2 '^server=' /etc/dnsmasq.conf | sed -n '2p' | cut -d= -f2)
         DOMAIN=$(grep '^domain=' /etc/dnsmasq.conf | cut -d= -f2)
         RANGE_START=$(grep '^dhcp-range=' /etc/dnsmasq.conf | cut -d= -f2 | cut -d, -f1)
         RANGE_END=$(grep '^dhcp-range=' /etc/dnsmasq.conf | cut -d= -f2 | cut -d, -f2)
+    fi
 
-        printf 'DHCP={"dns1":"%s","dns2":"%s","domainName":"%s","addressRange":{"start":"%s","end":"%s"}}\n' "${DNS1:-}" "${DNS2:-}" "${DOMAIN:--}" "${RANGE_START:-}" "${RANGE_END:-}"
-
+    if [ -n "${DNS1}${DNS2}${DOMAIN}${RANGE_START}${RANGE_END}" ]; then
+        printf 'DHCP={"dns1":"%s","dns2":"%s","domainName":"%s","addressRange":{"start":"%s","end":"%s"}}\n' "${DNS1:-}" "${DNS2:-}" "${DOMAIN:-}" "${RANGE_START:-}" "${RANGE_END:-}"
     fi
 }
 

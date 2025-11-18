@@ -60,7 +60,7 @@ Inventory Script: Device Network information
     Should Not Be Empty    ${mo["device_Network"]["LAN_eth0"]["name"]}
     Should Not Be Empty    ${mo["device_Network"]["LAN_eth0"]["ip4"]}
     Should Not Be Empty    ${mo["device_Network"]["LAN_eth0"]["mac"]}
-    Should Not Be Empty    ${mo["device_Network"]["WAN"]["globalIp"]}
+    Should Not Be Empty    ${mo["device_Network"]["WAN"]["publicIp"]}
     Should Not Be Empty    ${mo["device_Network"]["WAN"]["pingStatus"]}
     Should Not Be Empty    ${mo["device_Network"]["systemResolver"]["dns"]}
 
