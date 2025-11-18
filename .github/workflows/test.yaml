@@ -10,6 +10,10 @@ on:
   pull_request_target:
     branches: [ main ]
   merge_group:
+
+permissions:
+  contents: read
+
 jobs:
   approve:
     name: Approve
@@ -112,7 +116,10 @@ jobs:
     needs: [test]
     runs-on: ubuntu-latest
     permissions:
+      # Required to publish system test results to the PR
+      issues: write
       pull-requests: write
+      contents: read
     steps:
     - uses: actions/checkout@v4
     - name: Download reports
