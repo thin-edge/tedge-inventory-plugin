@@ -20,6 +20,7 @@ provides:
   - tedge-inventory-device-certificate
   - tedge-inventory-device-os
   - tedge-inventory-device-resources
+  - tedge-inventory-device-network
 
 apk:
   # Use noarch instead of "all"
