@@ -80,7 +80,9 @@ If you don't wish to install all of the plugins then you can also selectively in
 * tedge-inventory-c8y-hardware
 * tedge-inventory-c8y-position
 * tedge-inventory-device-certificate
+* tedge-inventory-device-network
 * tedge-inventory-device-os
+* tedge-inventory-device-resources
 
 For example, on Debian, after you have configured the Community repository, you install just the plugins
 
