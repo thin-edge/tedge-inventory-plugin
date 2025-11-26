@@ -1,0 +1,88 @@
+#!/bin/sh
+set -e
+
+# Server to be used for the ping test
+PING_TEST_SERVER=${PING_TEST_SERVER:-8.8.8.8}
+
+EXIT_OK=0
+
+# All the network interfaces
+INTERFACES=$(ls /sys/class/net)
+
+get_lan_info() {
+    for IFACE in $INTERFACES; do
+        # Exclude loopback
+        if [ "$IFACE" = "lo" ]; then
+            continue
+        fi
+
+        MAC=$(cat /sys/class/net/"$IFACE"/address)
+        STATUS=$(cat /sys/class/net/"$IFACE"/operstate)
+
+        IP4_LIST=$(ip -4 addr show dev "$IFACE" 2>/dev/null | awk '
+            $1 == "inet" {
+                ip_list = (ip_list ? ip_list "," : "") $2;
+            }
+            END {
+                print ip_list
+            }
+        ')
+
+        IP6_LIST=$(ip -6 addr show dev "$IFACE" 2>/dev/null | awk '
+            $1 == "inet6" && $2 !~ /^fe80/ {
+                ip_list = (ip_list ? ip_list "," : "") $2;
+            }
+            END {
+                print ip_list
+            }
+        ')
+
+        printf 'LAN_%s={"name":"%s","ip4":"%s","ip6":"%s","mac":"%s","status":"%s"}\n' "$IFACE" "$IFACE" "${IP4_LIST:-}" "${IP6_LIST:-}" "${MAC:-}" "${STATUS:-unknown}"
+
+    done
+}
+
+get_wan_info() {
+    COUNT=1           # PING count
+    DEADLINE=10        # PING deadline
+    PING_STATUS="not_available"
+
+    if command -v ping >/dev/null 2>&1; then
+        if ping -c "$COUNT" -w "$DEADLINE" "$PING_TEST_SERVER" > /dev/null 2>&1; then
+            PING_STATUS="ok"
+        else
+            PING_STATUS="failed"
+        fi
+    fi
+
+    if command -v curl >/dev/null 2>&1; then
+        PUBLIC_IP=$(curl -s --connect-timeout 15 ifconfig.me ||:)
+    fi
+    printf 'WAN={"publicIp":"%s","pingStatus":"%s"}\n' "${PUBLIC_IP:-unknown}" "${PING_STATUS}"
+}
+
+# Get system resolver DNS info
+get_system_dns_info() {
+    DNS_SERVERS=
+    if [ -f /etc/resolv.conf ]; then
+        DNS_SERVERS=$(awk '
+                /^nameserver / {
+                    output = (output ? output "," : "") $2
+                }
+                END {
+                    print output
+                }
+            ' /etc/resolv.conf )
+    fi
+    if [ -n "$DNS_SERVERS" ]; then
+        printf 'dns="%s"\n' "${DNS_SERVERS:-}"
+    else
+        echo "No dns servers found" >&2
+    fi
+}
+
+get_lan_info
+get_wan_info
+get_system_dns_info
+
+exit "$EXIT_OK"
