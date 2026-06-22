@@ -1,9 +1,8 @@
 *** Settings ***
 Resource    ../resources/common.robot
-Library    Cumulocity
-Library    DeviceLibrary
 
-Suite Setup    Custom Setup
+Test Setup       Setup Device
+Test Teardown    Teardown Device
 
 *** Test Cases ***
 
@@ -64,8 +63,3 @@ Inventory Script: Device Network information
     Should Not Be Empty    ${mo["device_Network"]["WAN"]["publicIp"]}
     Should Not Be Empty    ${mo["device_Network"]["WAN"]["pingStatus"]}
     Should Not Be Empty    ${mo["device_Network"]["dns"]}
-
-*** Keywords ***
-
-Custom Setup
-    Set Main Device
