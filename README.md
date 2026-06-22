@@ -108,25 +108,3 @@ apt-get install \
 The following packages are required to use the plugin:
 
 * tedge
-
-## Development
-
-### Start demo
-
-1. Start the demo
-
-    ```sh
-    just up && just bootstrap
-    ```
-
-The systemd `tedge-inventory.timer` task will trigger automatically on startup and periodically every hour (based on start time). It can be triggered asynchronously by exeucting:
-
-```sh
-systemctl start tedge-inventory.timer
-```
-
-### Stop demo
-
-```sh
-just down
-```
